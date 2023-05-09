@@ -1,0 +1,21 @@
+OrdererOrgs:
+  - Name: Orderer
+    Domain: centralized-vehicle.com
+    Specs:
+      - Hostname: orderer
+PeerOrgs:
+ - Name: rto
+   Domain: rto.centralized-vehicle.com
+   EnableNodeOUs: true
+   Template:
+      Count: 2
+   Users:
+      Count: 1
+ - Name: public
+   Domain: public.centralized-vehicle.com
+   EnableNodeOUs: true
+   Template:
+      Count: 3
+   Users:
+      Count: 1
+

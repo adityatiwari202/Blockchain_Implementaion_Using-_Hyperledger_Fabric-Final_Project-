@@ -1,0 +1,162 @@
+version: '2'
+
+volumes:
+  orderer.centralized-vehicle.com:
+  peer0.rto.centralized-vehicle.com:
+  peer1.rto.centralized-vehicle.com:
+  peer0.public.centralized-vehicle.com:
+  peer1.public.centralized-vehicle.com:
+  peer2.public.centralized-vehicle.com:
+
+
+networks:
+  registration:
+
+services:
+
+  ca.rto.centralized-vehicle.com:
+    image: hyperledger/fabric-ca:latest
+    environment:
+      - FABRIC_CA_HOME=/etc/hyperledger/fabric-ca-server
+      - FABRIC_CA_SERVER_CA_NAME=ca.rto.centralized-vehicle.com
+      - FABRIC_CA_SERVER_TLS_ENABLED=false
+    ports:
+      - "7054:7054"
+    command: sh -c 'fabric-ca-server start -b admin:adminpw -d' 
+    volumes:
+      - ./crypto-config/peerOrganizations/rto.centralized-vehicle.com/ca/:/etc/hyperledger/fabric-ca-server-config
+    container_name: ca.rto.centralized-vehicle.com
+    networks:
+      - registration
+
+  ca.public.centralized-vehicle.com:
+    image: hyperledger/fabric-ca:latest
+    environment:
+      - FABRIC_CA_HOME=/etc/hyperledger/fabric-ca-server
+      - FABRIC_CA_SERVER_CA_NAME=ca.public.centralized-vehicle.com
+      - FABRIC_CA_SERVER_TLS_ENABLED=false
+      
+    ports:
+      - "8054:7054"
+    command: sh -c 'fabric-ca-server start -b admin:adminpw -d' 
+    volumes:
+      - ./crypto-config/peerOrganizations/public.centralized-vehicle.com/ca/:/etc/hyperledger/fabric-ca-server-config
+    container_name: ca.public.centralized-vehicle.com
+    networks:
+      - registration
+
+
+
+  orderer.centralized-vehicle.com:
+    extends:
+      file:   docker-base/docker-compose-base.yaml
+      service: orderer.centralized-vehicle.com
+    container_name: orderer.centralized-vehicle.com
+    networks:
+      - registration
+
+  peer0.rto.centralized-vehicle.com:
+    container_name: peer0.rto.centralized-vehicle.com
+    extends:
+      file:  docker-base/docker-compose-base.yaml
+      service: peer0.rto.centralized-vehicle.com
+    networks:
+      - registration
+
+  peer1.rto.centralized-vehicle.com:
+    container_name: peer1.rto.centralized-vehicle.com
+    extends:
+      file:  docker-base/docker-compose-base.yaml
+      service: peer1.rto.centralized-vehicle.com
+    networks:
+      - registration
+
+  peer0.public.centralized-vehicle.com:
+    container_name: peer0.public.centralized-vehicle.com
+    extends:
+      file:  docker-base/docker-compose-base.yaml
+      service: peer0.public.centralized-vehicle.com
+    networks:
+      - registration
+
+  peer1.public.centralized-vehicle.com:
+    container_name: peer1.public.centralized-vehicle.com
+    extends:
+      file:  docker-base/docker-compose-base.yaml
+      service: peer1.public.centralized-vehicle.com
+    networks:
+      - registration
+
+  peer2.public.centralized-vehicle.com:
+    container_name: peer2.public.centralized-vehicle.com
+    extends:
+      file:  docker-base/docker-compose-base.yaml
+      service: peer2.public.centralized-vehicle.com
+    networks:
+      - registration
+
+  cli:
+    container_name: cli
+    image: hyperledger/fabric-tools:latest
+    tty: true
+    stdin_open: true
+    environment:
+      - GOPATH=/opt/gopath
+      - CORE_VM_ENDPOINT=unix:///host/var/run/docker.sock
+      - FABRIC_LOGGING_SPEC=INFO
+      - CORE_PEER_ID=cli
+      - CORE_PEER_ADDRESS=peer0.rto.centralized-vehicle.com:7051
+      - CORE_PEER_LOCALMSPID=rtoNode
+      - CORE_PEER_TLS_ENABLED=false
+      - CORE_PEER_TLS_CERT_FILE=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/rto.centralized-vehicle.com/peers/peer0.rto.centralized-vehicle.com/tls/server.crt
+      - CORE_PEER_TLS_KEY_FILE=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/rto.centralized-vehicle.com/peers/peer0.rto.centralized-vehicle.com/tls/server.key
+      - CORE_PEER_TLS_ROOTCERT_FILE=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/rto.centralized-vehicle.com/peers/peer0.rto.centralized-vehicle.com/tls/ca.crt
+      - CORE_PEER_MSPCONFIGPATH=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/rto.centralized-vehicle.com/users/Admin@rto.centralized-vehicle.com/msp
+    working_dir: /opt/gopath/src/github.com/hyperledger/fabric/peer
+    command: /bin/bash
+    volumes:
+      - /var/run/:/host/var/run/
+      - ./../chaincode/:/opt/gopath/src/github.com/hyperledger/fabric/peer/chaincode/
+      - ./crypto-config:/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/
+      - ./scripts:/opt/gopath/src/github.com/hyperledger/fabric/peer/scripts/
+      - ./channel-artifacts:/opt/gopath/src/github.com/hyperledger/fabric/peer/channel-artifacts
+    depends_on:
+      - ca.rto.centralized-vehicle.com
+      - ca.public.centralized-vehicle.com
+      - orderer.centralized-vehicle.com
+      - peer0.rto.centralized-vehicle.com
+      - peer1.rto.centralized-vehicle.com
+      - peer0.public.centralized-vehicle.com
+      - peer1.public.centralized-vehicle.com
+      - peer2.public.centralized-vehicle.com
+
+
+    networks:
+      - registration
+
+  chaincode:
+    container_name: chaincode
+    image: hyperledger/fabric-ccenv:latest
+    tty: true
+    environment:
+      - GOPATH=/opt/gopath
+      - CORE_VM_ENDPOINT=unix:///host/var/run/docker.sock
+      - FABRIC_LOGGING_SPEC=INFO
+      - CORE_PEER_ID=chaincode
+      - CORE_PEER_ADDRESS=peer0.rto.centralized-vehicle.com:7051
+      - CORE_PEER_LOCALMSPID=rtoNode
+      - CORE_PEER_TLS_ENABLED=false
+      - CORE_PEER_MSPCONFIGPATH=/opt/gopath/src/crypto/peerOrganizations/rto.centralized-vehicle.com/users/Admin@rto.centralized-vehicle.com/msp
+      - CORE_TLS_CLIENT_KEY_PATH=/opt/gopath/src/crypto/peerOrganizations/rto.centralized-vehicle.com/users/Admin@rto.centralized-vehicle.com/tls/client.key
+      - CORE_TLS_CLIENT_CERT_PATH=/opt/gopath/src/crypto/peerOrganizations/rto.centralized-vehicle.com/users/Admin@rto.centralized-vehicle.com/tls/client.crt
+      - CORE_PEER_TLS_ROOTCERT_FILE=/opt/gopath/src/crypto/peerOrganizations/rto.centralized-vehicle.com/users/Admin@rto.centralized-vehicle.com/tls/ca.crt
+    working_dir: /opt/gopath/src/chaincode
+    command: /bin/bash -c 'sleep 6000000'
+    volumes:
+      - /var/run/:/host/var/run/
+      - ./../chaincode:/opt/gopath/src/chaincode
+      - ./../chaincode-advanced:/opt/gopath/src/chaincode-advanced
+      - ./crypto-config:/opt/gopath/src/crypto
+    networks:
+      - registration
+

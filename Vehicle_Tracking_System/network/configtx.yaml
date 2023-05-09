@@ -1,0 +1,159 @@
+Organizations:
+  - &OrdererOrg
+    Name: Orderer
+    ID: OrdererMSP
+    MSPDir: crypto-config/ordererOrganizations/centralized-vehicle.com/msp
+    Policies:
+      Readers:
+        Type: Signature
+        Rule: "OR('OrdererMSP.member')"
+      Writers:
+        Type: Signature
+        Rule: "OR('OrdererMSP.member')"
+      Admins:
+        Type: Signature
+        Rule: "OR('OrdererMSP.member')"
+
+  - &rto
+    Name: rtoNode
+    ID: rtoNode
+    MSPDir: crypto-config/peerOrganizations/rto.centralized-vehicle.com/msp
+    Policies:
+      Readers:
+        Type: Signature
+        Rule: "OR('rtoNode.admin', 'rtoNode.peer', 'rtoNode.client')"
+      Writers:
+        Type: Signature
+        Rule: "OR('rtoNode.admin', 'rtoNode.peer', 'rtoNode.client')"
+      Admins:
+        Type: Signature
+        Rule: "OR('rtoNode.admin', 'rtoNode.peer', 'rtoNode.client')"
+    AnchorPeers:
+      - Host: peer0.rto.centralized-vehicle.com
+        Port: 7051
+
+  - &public
+    Name: publicNode
+    ID: publicNode
+    MSPDir: crypto-config/peerOrganizations/public.centralized-vehicle.com/msp
+    Policies:
+      Readers:
+        Type: Signature
+        Rule: "OR('publicNode.admin', 'publicNode.peer', 'publicNode.client')"
+      Writers:
+        Type: Signature
+        Rule: "OR('publicNode.admin', 'publicNode.peer', 'publicNode.client')"
+      Admins:
+        Type: Signature
+        Rule: "OR('publicNode.admin', 'publicNode.peer', 'publicNode.client')"
+    AnchorPeers:
+      - Host: peer0.public.centralized-vehicle.com
+        Port: 9051
+
+
+
+#Capabilities
+
+Capabilities:
+  Channel: &ChannelCapabilities
+    V1_4_3: true
+    V1_3: false
+    V1_1: false
+  Orderer: &OrdererCapabilities
+    V1_4_2: true
+    V1_1: false
+  Application: &ApplicationCapabilities
+    V1_4_2: true
+    V1_3: false
+    V1_2: false
+    V1_1: false
+
+#Application
+
+Application: &ApplicationDefaults
+  Organizations:
+  Policies: &ApplicationDefaultPolicies
+    Readers:
+      Type: ImplicitMeta
+      Rule: "ANY Readers"
+    Writers:
+      Type: ImplicitMeta
+      Rule: "ANY Writers"
+    Admins:
+      Type: ImplicitMeta
+      Rule: "ANY Admins"
+  Capabilities: *ApplicationCapabilities
+
+#Orderer
+Orderer: &OrdererDefaults
+  OrdererType: solo
+  Addresses:
+    - orderer.centralized-vehicle.com:7050
+  BatchTimeout: 2s
+  BatchSize:
+    MaxMessageCount: 10
+    AbsoluteMaxBytes: 99 MB
+    PreferredMaxBytes: 512 KB
+  Organizations:
+  Capabilities: *OrdererCapabilities
+  Policies:
+    Readers:
+      Type: ImplicitMeta
+      Rule: "ANY Readers"
+    Writers:
+      Type: ImplicitMeta
+      Rule: "ANY Writers"
+    Admins:
+      Type: ImplicitMeta
+      Rule: "ANY Admins"
+    # BlockValidation specifies what signatures must be included in the block
+    # from the orderer for the peer to validate it.
+    BlockValidation:
+      Type: ImplicitMeta
+      Rule: "ANY Writers"
+
+Channel: &ChannelDefaults
+  Policies:
+    # Who may invoke the 'Deliver' API
+    Readers:
+      Type: ImplicitMeta
+      Rule: "ANY Readers"
+    # Who may invoke the 'Broadcast' API
+    Writers:
+      Type: ImplicitMeta
+      Rule: "ANY Writers"
+    # By default, who may modify elements at this config level
+    Admins:
+      Type: ImplicitMeta
+      Rule: "ANY Admins"
+  Capabilities:
+    <<: *ChannelCapabilities
+
+
+#Profiles
+Profiles:
+  OrdererGenesis:
+    <<: *ChannelDefaults
+    Capabilities:
+      <<: *ChannelCapabilities
+    Orderer:
+      <<: *OrdererDefaults
+      Organizations:
+        - *OrdererOrg
+      Capabilities:
+        <<: *OrdererCapabilities
+    Consortiums:
+      RegistrationConsortium:
+        Organizations:
+          - *rto
+          - *public
+
+  RegistrationChannel:
+    Consortium: RegistrationConsortium
+    Application:
+      <<: *ApplicationDefaults
+      Organizations:
+        - *rto
+        - *public
+      Capabilities:
+        <<: *ApplicationCapabilities
